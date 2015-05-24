@@ -336,6 +336,12 @@ exports.Block = class Block extends Base
         prelude = @compileNode merge(o, indent: '')
         prelude.push @makeCode "\n"
       @expressions = rest
+    # Handle top-level await by wrapping in an async closure.
+    topAsync = !!@contains (node) -> node instanceof Op and node.isAwait()
+    if topAsync
+      generator = new Code([], Block.wrap @expressions)
+      callfunc = new Value(generator, [new Access new Literal 'call'])
+      @expressions = [new Call(callfunc, [new Literal 'this'])]
     fragments = @compileWithDeclarations o
     return fragments if o.bare
     [].concat prelude, @makeCode("(function() {\n"), fragments, @makeCode("\n}).call(this);\n")
