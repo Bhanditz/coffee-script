@@ -5,6 +5,9 @@
 
 Error.stackTraceLimit = Infinity
 
+printLine = (line) -> process.stdout.write line + '\n'
+printWarn = (line) -> process.stderr.write line + '\n'
+
 {Scope} = require './scope'
 {RESERVED, STRICT_PROSCRIBED} = require './lexer'
 iced = require 'iced-runtime'
@@ -1799,8 +1802,9 @@ exports.Code = class Code extends Base
 
     # Augment @body with iced-specific features
     @icedPatchBody o
+
     answer = answer.concat(@makeCode("\n"), @body.compileWithDeclarations(o), @makeCode("\n#{@tab}")) unless @body.isEmpty()
-  
+
     answer.push @makeCode '}'
 
     return [@makeCode(@tab), answer...] if @ctor
@@ -2692,22 +2696,45 @@ exports.makewait = (variable, value, lineno) ->
     result.error 'promise-style await must not have a defer statement'
   return result
 
-#### makepromise
+#### makefn
 
-# makepromise nests the function body inside a new Promise
-# IF an Await expression is present inside the body
-exports.makepromise = (params, body, tag) ->
+# makefn nests the function body inside a new Promise
+# IF a defer-free-await expression is present inside the body
+exports.makefn = (params, body, tag) ->
+  if containsUndeferredAwait body
+    # add 'autocb' param
+    args = [ new Param((new Literal 'autocb')) ]
 
-  if body.contains isAwait
-    # add 'autocb' and 'autoerrorcb' params
-    args = [ new Param((new Literal 'autocb')), new Param((new Literal 'autoerrorcb')) ]
-
-    tryBody = new Try(body, null, new Block.wrap [ new Literal 'autoerrorcb(_error)' ] )
-
-    codeBody = new Code(args, new Block.wrap [ tryBody ] )
-    body = new Block.wrap [ new Op('new', new Call(new Literal('Promise'), [ codeBody ])) ]
+    codeBody = new Code(args, new Block.wrap [ body ] )
+    body = new Block.wrap [
+      new Op('new', new Call(new Literal('Promise'), [ codeBody ])) ]
 
   return new Code params, body, tag
+
+# containsUndeferredAwait scans the body of a function to see
+# if it contains any promise-based awaits, that is, awaits that
+# do not contain any defers, or at least no defers that are not
+# contained by some nested defer-based-await.
+containsUndeferredAwait = (body) ->
+  foundUA = false
+  body.traverseChildren true, (node) ->
+    if foundUA
+      return false
+    if node instanceof Await
+      if isUndeferred(node)
+        foundUA = true
+      return false
+    return true
+  return foundUA
+
+isUndeferred = (awaitnode) ->
+  foundDefer = false
+  awaitnode.traverseChildren true, (node) ->
+    if foundDefer or (node instanceof Defer)
+      foundDefer = true
+      return false
+    return not (node instanceof Await)
+  return not foundDefer
 
 #### IcedRuntime
 #
@@ -3334,9 +3361,6 @@ Closure =
 isDefer = (node) ->
   node instanceof Defer
 
-isAwait = (node) ->
-  node instanceof Await
-  
 # Unfold a node's child if soak, then tuck the node under created `If`
 unfoldSoak = (o, parent, name) ->
   return unless ifn = parent[name].unfoldSoak o

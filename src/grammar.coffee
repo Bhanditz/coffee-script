@@ -38,7 +38,7 @@ o = (patternString, action, options) ->
 
   # All runtime functions we need are defined on "yy"
   action = action.replace /\bnew /g, '$&yy.'
-  action = action.replace /\b(?:Block\.wrap|extend|makewait|makepromise)\b/g, 'yy.$&'
+  action = action.replace /\b(?:Block\.wrap|extend|makewait|makefn)\b/g, 'yy.$&'
 
   # Returns a function which adds location data to the first parameter passed
   # in, and returns the parameter.  If the parameter is not a node, it will
@@ -200,8 +200,8 @@ grammar =
   # of **Block** preceded by a function arrow, with an optional parameter
   # list.
   Code: [
-    o 'PARAM_START ParamList PARAM_END FuncGlyph Block', -> makepromise $2, $5, $4
-    o 'FuncGlyph Block',                        -> makepromise [], $2, $1
+    o 'PARAM_START ParamList PARAM_END FuncGlyph Block', -> makefn $2, $5, $4
+    o 'FuncGlyph Block',                        -> makefn [], $2, $1
   ]
 
   # CoffeeScript has two different symbols for functions. `->` is for ordinary

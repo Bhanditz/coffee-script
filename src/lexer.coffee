@@ -138,9 +138,6 @@ exports.Lexer = class Lexer
             poppedToken = @tokens.pop()
             id = '!' + id
     
-    if tag is 'ASYNC'
-      @tagParameters() 
-
     if id in JS_FORBIDDEN
       if forcedIdentifier
         tag = 'IDENTIFIER'
@@ -745,7 +742,7 @@ JS_KEYWORDS = [
 COFFEE_KEYWORDS = ['undefined', 'then', 'unless', 'until', 'loop', 'of', 'by', 'when'] 
 
 # iced additions
-COFFEE_KEYWORDS = COFFEE_KEYWORDS.concat [ 'await', 'defer', 'async' ]
+COFFEE_KEYWORDS = COFFEE_KEYWORDS.concat [ 'await', 'defer' ]
 
 COFFEE_ALIAS_MAP =
   and  : '&&'

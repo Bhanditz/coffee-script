@@ -91,7 +91,6 @@ exports.tokens = withPrettyErrors (code, options) ->
 # return the AST. You can then compile it by calling `.compile()` on the root,
 # or traverse it by using `.traverseChildren()` with a callback.
 exports.nodes = withPrettyErrors (source, options) ->
-  console.log 'uniced', options.uniced
   if typeof source is 'string'
     result = parser.parse lexer.tokenize(source, options)
   else
